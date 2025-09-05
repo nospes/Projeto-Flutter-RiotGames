@@ -10,7 +10,8 @@ class RiotApi {
     required String tagLine,
     RegionHost region = RegionHost.americas,
   }) async {
-    final url = '${regionBase(region)}/riot/account/v1/accounts/by-riot-id/$gameName/$tagLine';
+    final url =
+        '${regionBase(region)}/riot/account/v1/accounts/by-riot-id/$gameName/$tagLine';
     final res = await _dio.get(url);
     return Map<String, dynamic>.from(res.data);
   }
@@ -19,7 +20,8 @@ class RiotApi {
     required String puuid,
     PlatformHost platform = PlatformHost.br1,
   }) async {
-    final url = '${platformBase(platform)}/lol/summoner/v4/summoners/by-puuid/$puuid';
+    final url =
+        '${platformBase(platform)}/lol/summoner/v4/summoners/by-puuid/$puuid';
     final res = await _dio.get(url);
     return Map<String, dynamic>.from(res.data);
   }
@@ -29,7 +31,8 @@ class RiotApi {
     required String name,
     PlatformHost platform = PlatformHost.br1,
   }) async {
-    final url = '${platformBase(platform)}/lol/summoner/v4/summoners/by-name/$name';
+    final url =
+        '${platformBase(platform)}/lol/summoner/v4/summoners/by-name/$name';
     final res = await _dio.get(url);
     return Map<String, dynamic>.from(res.data);
   }
@@ -40,7 +43,8 @@ class RiotApi {
     int start = 0,
     int count = 10,
   }) async {
-    final url = '${regionBase(region)}/lol/match/v5/matches/by-puuid/$puuid/ids?start=$start&count=$count';
+    final url =
+        '${regionBase(region)}/lol/match/v5/matches/by-puuid/$puuid/ids?start=$start&count=$count';
     final res = await _dio.get(url);
     return (res.data as List).cast<String>();
   }

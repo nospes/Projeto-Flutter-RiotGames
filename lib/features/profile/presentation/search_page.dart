@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../profile/data/riot_api.dart';
 import '../../profile/data/riot_routes.dart';
 import '../../../core/providers.dart';
 import 'profile_page.dart';
@@ -26,7 +25,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     try {
       final riotId = _ctrl.text.trim();
       if (!riotId.contains('#')) {
-        throw ArgumentError('Use o formato Riot ID: gameName#tagLine (ex.: João#BR1)');
+        throw ArgumentError(
+          'Use o formato Riot ID: gameName#tagLine (ex.: João#BR1)',
+        );
       }
       final parts = riotId.split('#');
       if (parts.length != 2) {
@@ -59,19 +60,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ProfilePage(
-          riotId: riotId,
-          account: account,
-          summoner: summoner,
-          matchIds: matchIds,
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProfilePage(
+            riotId: riotId,
+            account: account,
+            summoner: summoner,
+            matchIds: matchIds,
+          ),
         ),
-      ));
+      );
     } catch (e) {
       setState(() => _error = e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_error!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_error!)));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -103,7 +106,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 onPressed: _loading || !canSearch ? null : _onSearch,
                 icon: _loading
                     ? const SizedBox(
-                        width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.search),
                 label: const Text('Buscar'),
               ),
