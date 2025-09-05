@@ -1,13 +1,15 @@
+/// profile_page.dart — visão geral do perfil e partidas recentes
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
-import '../../profile/data/riot_api.dart';
 import '../../profile/data/riot_routes.dart';
 import '../../../shared/queues.dart';
 import '../../../shared/time_format.dart';
 import 'match_detail_page.dart';
 
+/// Props: riotId, account, summoner, matchIds
 class ProfilePage extends ConsumerStatefulWidget {
   final String riotId;
   final Map<String, dynamic> account;
@@ -27,6 +29,8 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
+  // estado: loading/erro/resumo de partidas
+  // carregamento inicial (_load)
   bool _loading = true;
   String? _error;
   List<_MatchSummary> _summaries = const [];
@@ -46,67 +50,75 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     try {
       final api = ref.read(riotApiProvider);
-      final dd  = ref.read(dataDragonProvider);
+      final dd = ref.read(dataDragonProvider);
 
-      final puuid = (widget.account['puuid'] ?? widget.summoner['puuid']).toString();
+      final puuid = (widget.account['puuid'] ?? widget.summoner['puuid'])
+          .toString();
 
       // Busca detalhes básicos de cada partida em paralelo
-      final results = await Future.wait(widget.matchIds.map((id) async {
-        try {
-          final m = await api.getMatchDetail(
-            matchId: id,
-            region: RegionHost.americas,
-          );
+      final results = await Future.wait(
+        widget.matchIds.map((id) async {
+          try {
+            final m = await api.getMatchDetail(
+              matchId: id,
+              region: RegionHost.americas,
+            );
 
-          final info = m['info'] as Map<String, dynamic>;
-          final parts = (info['participants'] as List).cast<Map<String, dynamic>>();
-          // Encontra o seu participante (fallback pro primeiro se não achar)
-          final me = parts.cast<Map<String, dynamic>?>()
-              .firstWhere((p) => p?['puuid'] == puuid, orElse: () => parts.first);
+            final info = m['info'] as Map<String, dynamic>;
+            final parts = (info['participants'] as List)
+                .cast<Map<String, dynamic>>();
+            // Encontra o seu participante (fallback pro primeiro se não achar)
+            final me = parts.cast<Map<String, dynamic>?>().firstWhere(
+              (p) => p?['puuid'] == puuid,
+              orElse: () => parts.first,
+            );
 
-          final champName = (me?['championName'] ?? '').toString();
-          final champIcon = champName.isNotEmpty ? await dd.championSquareUrl(champName) : null;
+            final champName = (me?['championName'] ?? '').toString();
+            final champIcon = champName.isNotEmpty
+                ? await dd.championSquareUrl(champName)
+                : null;
 
-          final kills = (me?['kills'] as num?)?.toInt() ?? 0;
-          final deaths = (me?['deaths'] as num?)?.toInt() ?? 0;
-          final assists = (me?['assists'] as num?)?.toInt() ?? 0;
-          final win = (me?['win'] == true);
-          final durationSec = (info['gameDuration'] as num?)?.toInt() ?? 0;
-          final queueId = info['queueId'] as int?;
-          final endMs = (info['gameEndTimestamp'] as num?)?.toInt();
-          final startMs = (info['gameCreation'] as num?)?.toInt();
-          final tsMs = endMs ?? startMs ?? 0;
+            final kills = (me?['kills'] as num?)?.toInt() ?? 0;
+            final deaths = (me?['deaths'] as num?)?.toInt() ?? 0;
+            final assists = (me?['assists'] as num?)?.toInt() ?? 0;
+            final win = (me?['win'] == true);
+            final durationSec = (info['gameDuration'] as num?)?.toInt() ?? 0;
+            final queueId = info['queueId'] as int?;
+            final endMs = (info['gameEndTimestamp'] as num?)?.toInt();
+            final startMs = (info['gameCreation'] as num?)?.toInt();
+            final tsMs = endMs ?? startMs ?? 0;
 
-          return _MatchSummary(
-            id: id,
-            champion: champName,
-            championIcon: champIcon,
-            kills: kills,
-            deaths: deaths,
-            assists: assists,
-            win: win,
-            durationSec: durationSec,
-            queueId: queueId,
-            timestampMs: tsMs,
-            puuid: puuid,
-          );
-        } catch (_) {
-          // Em caso de erro individual, devolve um resumo mínimo (a lista segue)
-          return _MatchSummary(
-            id: id,
-            champion: '',
-            championIcon: null,
-            kills: 0,
-            deaths: 0,
-            assists: 0,
-            win: false,
-            durationSec: 0,
-            queueId: null,
-            timestampMs: 0,
-            puuid: puuid,
-          );
-        }
-      }));
+            return _MatchSummary(
+              id: id,
+              champion: champName,
+              championIcon: champIcon,
+              kills: kills,
+              deaths: deaths,
+              assists: assists,
+              win: win,
+              durationSec: durationSec,
+              queueId: queueId,
+              timestampMs: tsMs,
+              puuid: puuid,
+            );
+          } catch (_) {
+            // Em caso de erro individual, devolve um resumo mínimo (a lista segue)
+            return _MatchSummary(
+              id: id,
+              champion: '',
+              championIcon: null,
+              kills: 0,
+              deaths: 0,
+              assists: 0,
+              win: false,
+              durationSec: 0,
+              queueId: null,
+              timestampMs: 0,
+              puuid: puuid,
+            );
+          }
+        }),
+      );
 
       // Ordena por data (desc)
       results.sort((a, b) => (b.timestampMs).compareTo(a.timestampMs));
@@ -127,40 +139,49 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    // cabeçalho do perfil + lista/resumo de partidas
     final level = widget.summoner['summonerLevel'];
-    final name  = widget.summoner['name'];
+    final name = widget.summoner['name'];
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.riotId)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      // Cabeçalho do perfil
-                      Card(
-                        child: ListTile(
-                          title: Text(name?.toString() ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text('Level: ${level ?? "—"}'),
-                          trailing: Text(
-                            'PUUID:\n${((widget.account['puuid'] ?? widget.summoner['puuid']).toString()).substring(0, 10)}...',
-                            textAlign: TextAlign.right,
-                          ),
-                        ),
+          ? Center(
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Cabeçalho do perfil
+                  Card(
+                    child: ListTile(
+                      title: Text(
+                        name?.toString() ?? '—',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 12),
-
-                      Text('Últimas partidas', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-
-                      for (final s in _summaries) _MatchCard(summary: s),
-                    ],
+                      subtitle: Text('Level: ${level ?? "—"}'),
+                      trailing: Text(
+                        'PUUID:\n${((widget.account['puuid'] ?? widget.summoner['puuid']).toString()).substring(0, 10)}...',
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Últimas partidas',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+
+                  for (final s in _summaries) _MatchCard(summary: s),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -193,6 +214,7 @@ class _MatchSummary {
 }
 
 // --------- CARD DA PARTIDA ---------
+/// Cartão/resumo de partida (widget privado)
 class _MatchCard extends StatelessWidget {
   final _MatchSummary summary;
   const _MatchCard({required this.summary});
@@ -205,17 +227,21 @@ class _MatchCard extends StatelessWidget {
 
     final queue = queueLabel(summary.queueId);
     final duration = formatDurationMmSs(summary.durationSec);
-    final badgeColor = summary.win ? Colors.green.shade600 : Colors.red.shade600;
+    final badgeColor = summary.win
+        ? Colors.green.shade600
+        : Colors.red.shade600;
 
     return Card(
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => MatchDetailPage(
-              matchId: summary.id,
-              viewerPuuid: summary.puuid,
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => MatchDetailPage(
+                matchId: summary.id,
+                viewerPuuid: summary.puuid,
+              ),
             ),
-          ));
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -247,19 +273,27 @@ class _MatchCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 16),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: badgeColor,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             summary.win ? 'Vitória' : 'Derrota',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -270,7 +304,10 @@ class _MatchCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: -8,
                       children: [
-                        _Chip(text: 'K/D/A ${summary.kills}/${summary.deaths}/${summary.assists}'),
+                        _Chip(
+                          text:
+                              'K/D/A ${summary.kills}/${summary.deaths}/${summary.assists}',
+                        ),
                         _Chip(text: 'KDA ${kda.toStringAsFixed(2)}'),
                         _Chip(text: queue),
                         _Chip(text: duration),
@@ -289,6 +326,7 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
+/// Chip de status/labels (widget privado)
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});
@@ -301,5 +339,5 @@ class _Chip extends StatelessWidget {
         side: BorderSide(color: Colors.black.withOpacity(0.08)),
       ),
     );
-    }
+  }
 }

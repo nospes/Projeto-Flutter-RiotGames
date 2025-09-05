@@ -1,10 +1,13 @@
+/// riot_api.dart — cliente para endpoints REST da Riot
 import 'package:dio/dio.dart';
 import 'riot_routes.dart';
 
+/// Wrapper principal
 class RiotApi {
   final Dio _dio;
   RiotApi(this._dio);
 
+  /// Usuários
   Future<Map<String, dynamic>> getAccountByRiotId({
     required String gameName,
     required String tagLine,
@@ -26,7 +29,6 @@ class RiotApi {
     return Map<String, dynamic>.from(res.data);
   }
 
-  // Opcional: buscar só pelo nome (sem tag)
   Future<Map<String, dynamic>> getSummonerByName({
     required String name,
     PlatformHost platform = PlatformHost.br1,
@@ -37,6 +39,7 @@ class RiotApi {
     return Map<String, dynamic>.from(res.data);
   }
 
+  /// Matches
   Future<List<String>> getMatchIdsByPuuid({
     required String puuid,
     RegionHost region = RegionHost.americas,
@@ -49,7 +52,6 @@ class RiotApi {
     return (res.data as List).cast<String>();
   }
 
-  // 🔧 ESTE método precisa estar DENTRO da classe para usar _dio
   Future<Map<String, dynamic>> getMatchDetail({
     required String matchId,
     RegionHost region = RegionHost.americas,

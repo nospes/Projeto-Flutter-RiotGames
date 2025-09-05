@@ -1,3 +1,5 @@
+/// time_format.dart — helpers de formatação de tempo
+
 String formatDurationMmSs(int seconds) {
   if (seconds < 0) seconds = 0;
   final m = seconds ~/ 60;

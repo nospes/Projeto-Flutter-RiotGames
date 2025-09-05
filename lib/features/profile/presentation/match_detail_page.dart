@@ -1,10 +1,11 @@
+/// match_detail_page.dart — detalhes completos de uma partida
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../profile/data/riot_routes.dart';
 import '../../../core/providers.dart';
 import '../../../shared/queues.dart';
 
+/// Props: matchId, viewerPuuid
 class MatchDetailPage extends ConsumerStatefulWidget {
   final String matchId;
   final String viewerPuuid;
@@ -20,10 +21,12 @@ class MatchDetailPage extends ConsumerStatefulWidget {
 }
 
 class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
-  Map<String, dynamic>? _match;       // payload completo do match
-  Map<String, dynamic>? _me;          // participante correspondente ao viewer
-  String? _champIcon;                 // ícone do campeão
-  String? _spell1Icon, _spell2Icon;   // ícones dos feitiços
+  // estado: payload do match, participante “eu”, ícones/itens
+  // carregamento inicial + resolução de assets
+  Map<String, dynamic>? _match; // payload completo do match
+  Map<String, dynamic>? _me; // participante correspondente ao viewer
+  String? _champIcon; // ícone do campeão
+  String? _spell1Icon, _spell2Icon; // ícones dos feitiços
   List<String?> _itemIcons = const []; // ícones dos itens (0..6)
   String? _error;
 
@@ -36,7 +39,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
   Future<void> _load() async {
     try {
       final api = ref.read(riotApiProvider);
-      final dd  = ref.read(dataDragonProvider);
+      final dd = ref.read(dataDragonProvider);
 
       final m = await api.getMatchDetail(
         matchId: widget.matchId,
@@ -44,10 +47,11 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
       );
 
       final info = m['info'] as Map<String, dynamic>;
-      final participants =
-          (info['participants'] as List).cast<Map<String, dynamic>>();
-      final me =
-          participants.firstWhere((p) => p['puuid'] == widget.viewerPuuid);
+      final participants = (info['participants'] as List)
+          .cast<Map<String, dynamic>>();
+      final me = participants.firstWhere(
+        (p) => p['puuid'] == widget.viewerPuuid,
+      );
 
       // Campeão
       final championName = (me['championName'] ?? '').toString();
@@ -55,15 +59,17 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
           ? await dd.championSquareUrl(championName)
           : null;
 
-      // Feitiços (converte num -> int com segurança)
+      // Feitiços
       final s1Key = (me['summoner1Id'] as num?)?.toInt() ?? 0;
       final s2Key = (me['summoner2Id'] as num?)?.toInt() ?? 0;
       final s1 = await dd.spellIconFromNumericKey(s1Key);
       final s2 = await dd.spellIconFromNumericKey(s2Key);
 
       // Itens (0..6; 6 = trinket/ward)
-      final itemIds =
-          List.generate(7, (i) => (me['item$i'] as num?)?.toInt() ?? 0);
+      final itemIds = List.generate(
+        7,
+        (i) => (me['item$i'] as num?)?.toInt() ?? 0,
+      );
       final itemIcons = <String?>[];
       for (final id in itemIds) {
         itemIcons.add(await dd.itemIcon(id));
@@ -86,6 +92,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // topo (campeão/feitiços/itens) + abas/seções de estatísticas
     final theme = Theme.of(context);
 
     if (_error != null) {
@@ -116,7 +123,8 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
         ? (kills + assists).toDouble()
         : (kills + assists) / deaths;
     final pos = (me['teamPosition'] ?? '').toString().toUpperCase();
-    final cs = (me['totalMinionsKilled'] ?? 0) + (me['neutralMinionsKilled'] ?? 0);
+    final cs =
+        (me['totalMinionsKilled'] ?? 0) + (me['neutralMinionsKilled'] ?? 0);
     final gold = me['goldEarned'] ?? 0;
     final champ = (me['championName'] ?? '').toString();
 
@@ -136,7 +144,9 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
             child: Text(
               win ? 'Vitória' : 'Derrota',
               style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -152,8 +162,9 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundImage:
-                        _champIcon != null ? NetworkImage(_champIcon!) : null,
+                    backgroundImage: _champIcon != null
+                        ? NetworkImage(_champIcon!)
+                        : null,
                     child: _champIcon == null
                         ? const Icon(Icons.sports_esports)
                         : null,
@@ -171,10 +182,12 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(champ,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            )),
+                        Text(
+                          champ,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Wrap(
                           spacing: 8,
@@ -231,7 +244,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
 }
 
 // ----- widgets auxiliares -----
-
+/// Chip/etiqueta (widget privado)
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});
@@ -247,6 +260,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
+/// Ícone de feitiço (widget privado)
 class _SpellIcon extends StatelessWidget {
   final String? url;
   const _SpellIcon({this.url});
@@ -260,6 +274,7 @@ class _SpellIcon extends StatelessWidget {
   }
 }
 
+/// Ícone de item (widget privado)
 class _ItemIcon extends StatelessWidget {
   final String? url;
   const _ItemIcon({this.url});

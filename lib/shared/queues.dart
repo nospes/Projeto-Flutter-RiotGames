@@ -1,3 +1,5 @@
+/// queues.dart — mapeamento de filas e helper de label
+
 const Map<int, String> queueNames = {
   400: "Normal Draft",
   420: "Ranqueada Solo/Duo",

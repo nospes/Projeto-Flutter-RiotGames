@@ -1,9 +1,11 @@
+/// search_page.dart — tela inicial de busca por Riot ID
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../profile/data/riot_routes.dart';
 import '../../../core/providers.dart';
 import 'profile_page.dart';
 
+/// Stateful + Riverpod
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -12,6 +14,8 @@ class SearchPage extends ConsumerStatefulWidget {
 }
 
 class _SearchPageState extends ConsumerState<SearchPage> {
+  // estado básico (input/loading/erro)
+  // ação de busca + navegação para ProfilePage
   final _ctrl = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -38,7 +42,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
       final api = ref.read(riotApiProvider);
 
-      // Riot ID -> account (PUUID)
+      // Riot ID
       final account = await api.getAccountByRiotId(
         gameName: gameName,
         tagLine: tagLine,
@@ -46,13 +50,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       );
       final puuid = account['puuid'] as String;
 
-      // PUUID -> Summoner (via plataforma BR)
+      // PUUID
       final summoner = await api.getSummonerByPuuid(
         puuid: puuid,
         platform: PlatformHost.br1,
       );
 
-      // Partidas (IDs) – deixamos pronto para próxima etapa
+      // Partidas (IDs)
       final matchIds = await api.getMatchIdsByPuuid(
         puuid: puuid,
         region: RegionHost.americas,
@@ -82,6 +86,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    // AppBar, campo de texto, botão “Buscar”
     final canSearch = _ctrl.text.trim().contains('#');
 
     return Scaffold(
