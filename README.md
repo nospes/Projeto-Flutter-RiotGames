@@ -8,7 +8,7 @@ Arquitetura simples com **Riverpod** (injeção de dependência/estado) e **Dio*
 
 ## Tecnologias
 
-* Flutter (Material 3)
+* Flutter 
 * Riverpod
 * Dio (HTTP)
 * Riot API + Data Dragon
