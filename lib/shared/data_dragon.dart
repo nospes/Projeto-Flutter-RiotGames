@@ -1,4 +1,4 @@
-/// data_dragon.dart — resolução de versões e ícones (campeão/feitiço/item)
+/// resolução de versões e ícones (campeão/feitiço/item)
 import 'package:dio/dio.dart';
 
 /// Cliente Data Dragon (usa Dio)

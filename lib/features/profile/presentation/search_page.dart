@@ -15,6 +15,7 @@ class SearchPage extends ConsumerStatefulWidget {
 }
 
 class _SearchPageState extends ConsumerState<SearchPage> {
+  // EStados locais
   final _ctrl = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -43,7 +44,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         return PlatformHost.tr1;
       case 'RU':
         return PlatformHost.ru;
-      // Seu enum usa "oce"; o prefixo do match é "OC1"
       case 'OC1':
         return PlatformHost.oce;
     }
@@ -126,6 +126,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     throw ArgumentError('Summoner não encontrado em nenhuma plataforma.');
   }
 
+  // Fluxo principal
   Future<void> _onSearch() async {
     setState(() {
       _loading = true;
@@ -148,7 +149,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       final gameName = parts[0];
       final tagLine = parts[1];
 
-      // 1) Descobre a região correta do account (sem assumir nada da TAG)
+      // 1) Descobre a região correta do account
       final (accountRegion, account) = await _findAccountRegion(
         gameName: gameName,
         tagLine: tagLine,
@@ -230,6 +231,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
+  // construção da UI
   @override
   Widget build(BuildContext context) {
     final canSearch = _ctrl.text.trim().contains('#');

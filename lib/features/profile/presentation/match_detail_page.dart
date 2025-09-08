@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shared/time_format.dart';
+
 import '../../profile/data/riot_routes.dart';
 import '../../../core/providers.dart';
 import '../../../shared/queues.dart';
+import '../../../shared/match_classifier.dart';
+import '../../../shared/time_format.dart';
 
 class MatchDetailPage extends ConsumerStatefulWidget {
   final String matchId;
@@ -25,33 +27,41 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
   String? _champIcon; // ícone do campeão
   String? _spell1Icon, _spell2Icon; // ícones dos feitiços
   List<String?> _itemIcons = const []; // ícones dos itens (0..6)
-  String? _error;
-  // --- Players section (expand/collapse) ---
+  String? _error; // Tratamento de erros
+  String? _classLabel; // Classificação do jogador
+  // Seção de mostrar os times ou não
   bool _showPlayers = false;
+
+  //Listo dos times
   List<_PlayerBrief> _blueRoster = const [];
   List<_PlayerBrief> _redRoster = const [];
 
+  //Lazy loader
   Future<void> _loadPlayersIfNeeded() async {
     if (_match == null) return;
     if (_blueRoster.isNotEmpty || _redRoster.isNotEmpty) return;
 
+    // Pegando base de dados
     final dd = ref.read(dataDragonProvider);
     final info = _match!['info'] as Map<String, dynamic>;
     final participants = List<Map<String, dynamic>>.from(
       info['participants'] as List,
     );
 
+    //Carregamento e organização dados do jogador
     Future<_PlayerBrief> buildBrief(Map<String, dynamic> p) async {
       final champName = (p['championName'] ?? '').toString();
       final champIcon = await dd.championSquareUrl(champName);
       final itemIds = List<int>.generate(7, (i) => (p['item$i'] ?? 0) as int);
       final itemIcons = await Future.wait(itemIds.map((id) => dd.itemIcon(id)));
+
       final game = (p['riotIdGameName'] ?? '').toString().trim();
       final tag = (p['riotIdTagline'] ?? '').toString().trim();
       final fallback = (p['summonerName'] ?? '').toString().trim();
       final display = (game.isNotEmpty && tag.isNotEmpty)
           ? '$game#$tag'
           : (fallback.isNotEmpty ? fallback : '—');
+
       return _PlayerBrief(
         name: display,
         championName: champName,
@@ -61,6 +71,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
       );
     }
 
+    // Procesa o dado de todos os jogadores e os divide por time
     final briefs = await Future.wait(participants.map(buildBrief));
     _blueRoster = briefs.where((b) => b.teamId == 100).toList(growable: false);
     _redRoster = briefs.where((b) => b.teamId == 200).toList(growable: false);
@@ -74,6 +85,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     _load();
   }
 
+  // pré carregamento de informações
   Future<void> _load() async {
     try {
       final api = ref.read(riotApiProvider);
@@ -97,7 +109,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
           ? await dd.championSquareUrl(championName)
           : null;
 
-      // Feitiços (converte num -> int com segurança)
+      // Posição dos Feitiços
       final s1Key = (me['summoner1Id'] as num?)?.toInt() ?? 0;
       final s2Key = (me['summoner2Id'] as num?)?.toInt() ?? 0;
       final s1 = await dd.spellIconFromNumericKey(s1Key);
@@ -114,6 +126,10 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
       }
 
       if (!mounted) return;
+
+      // Classificação customizada do jogador
+      final __classLabel = classifyPlayerInMatch(match: m, me: me);
+
       setState(() {
         _match = m;
         _me = me;
@@ -121,6 +137,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
         _spell1Icon = s1;
         _spell2Icon = s2;
         _itemIcons = itemIcons;
+        _classLabel = __classLabel;
       });
     } catch (e) {
       if (!mounted) return;
@@ -128,6 +145,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     }
   }
 
+  // Construção da pagina
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -198,6 +216,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
               child: Row(
                 children: [
                   CircleAvatar(
+                    // Icone do campeão
                     radius: 28,
                     backgroundImage: _champIcon != null
                         ? NetworkImage(_champIcon!)
@@ -209,9 +228,9 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                   const SizedBox(width: 12),
                   Column(
                     children: [
-                      _SpellIcon(url: _spell1Icon),
+                      _SpellIcon(url: _spell1Icon), // Feitiço de invocador - D
                       const SizedBox(height: 6),
-                      _SpellIcon(url: _spell2Icon),
+                      _SpellIcon(url: _spell2Icon), // Feitiço de invocador - F
                     ],
                   ),
                   const SizedBox(width: 16),
@@ -227,6 +246,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                         ),
                         const SizedBox(height: 4),
                         Wrap(
+                          // Detalhes de desempenho
                           spacing: 8,
                           runSpacing: -8,
                           children: [
@@ -235,6 +255,10 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                             if (pos.isNotEmpty) _Chip(text: pos),
                             _Chip(text: 'CS $cs'),
                             _Chip(text: 'Gold $gold'),
+                            if (_classLabel != null)
+                              _Chip(
+                                text: _classLabel!,
+                              ), // Classificação customizada do jogador
                           ],
                         ),
                       ],
@@ -245,6 +269,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
             ),
           ),
 
+          // Inventário do jogador
           const SizedBox(height: 12),
           Text('Itens', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -258,6 +283,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
             ),
           ),
 
+          //Detalhes da partida
           const SizedBox(height: 12),
           Text('Resumo', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -276,8 +302,9 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
               ),
             ),
           ),
+
+          // Botão para esconder/mostrar jogadores
           const SizedBox(height: 12),
-          // Toggle players section
           Align(
             alignment: Alignment.centerLeft,
             child: ActionChip(
@@ -292,6 +319,8 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
               },
             ),
           ),
+
+          //Tabela dos times
           if (_showPlayers) ...[
             const SizedBox(height: 12),
             Card(
@@ -324,6 +353,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
   }
 }
 
+//Dados dos jogadores da partida
 class _PlayerBrief {
   _PlayerBrief({
     required this.name,
@@ -337,11 +367,11 @@ class _PlayerBrief {
   final String championName;
   final String? champIcon;
   final List<String?> items;
-  final int teamId; // 100 (azul) / 200 (vermelho)
+  final int teamId;
 }
-
 // ----- widgets auxiliares -----
 
+//Pequeno container de texto
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});
@@ -357,6 +387,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
+// Icone de feitiço
 class _SpellIcon extends StatelessWidget {
   final String? url;
   const _SpellIcon({this.url});
@@ -370,6 +401,7 @@ class _SpellIcon extends StatelessWidget {
   }
 }
 
+// Icone de Item
 class _ItemIcon extends StatelessWidget {
   final String? url;
   const _ItemIcon({this.url});
@@ -391,6 +423,7 @@ class _ItemIcon extends StatelessWidget {
   }
 }
 
+// Container de Jogadores
 class _PlayerRow extends StatelessWidget {
   const _PlayerRow({required this.player});
   final _PlayerBrief player;

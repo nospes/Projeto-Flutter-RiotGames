@@ -29,7 +29,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  // estado: loading/erro/resumo de partidas
+  // loading/erro/resumo de partidas
   // carregamento inicial (_load)
   bool _loading = true;
   String? _error;
@@ -55,7 +55,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final puuid = (widget.account['puuid'] ?? widget.summoner['puuid'])
           .toString();
 
-      // Busca detalhes básicos de cada partida em paralelo
+      // Busca detalhes básicos de cada partida
       final results = await Future.wait(
         widget.matchIds.map((id) async {
           try {
@@ -67,12 +67,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             final info = m['info'] as Map<String, dynamic>;
             final parts = (info['participants'] as List)
                 .cast<Map<String, dynamic>>();
-            // Encontra o seu participante (fallback pro primeiro se não achar)
+            // Encontra o jogador
             final me = parts.cast<Map<String, dynamic>?>().firstWhere(
               (p) => p?['puuid'] == puuid,
               orElse: () => parts.first,
             );
 
+            // Carrega nome do campeão e dados referentes a partida
             final champName = (me?['championName'] ?? '').toString();
             final champIcon = champName.isNotEmpty
                 ? await dd.championSquareUrl(champName)
@@ -102,7 +103,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               puuid: puuid,
             );
           } catch (_) {
-            // Em caso de erro individual, devolve um resumo mínimo (a lista segue)
+            // Em caso de erro individual, devolve um place-holder
             return _MatchSummary(
               id: id,
               champion: '',
@@ -120,7 +121,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         }),
       );
 
-      // Ordena por data (desc)
+      // Ordena por data da partida(desc)
       results.sort((a, b) => (b.timestampMs).compareTo(a.timestampMs));
 
       if (!mounted) return;
@@ -137,6 +138,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  //Base da página
   @override
   Widget build(BuildContext context) {
     // cabeçalho do perfil + lista/resumo de partidas
