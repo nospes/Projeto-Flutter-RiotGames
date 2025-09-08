@@ -1,11 +1,10 @@
-/// match_detail_page.dart — detalhes completos de uma partida
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/time_format.dart';
 import '../../profile/data/riot_routes.dart';
 import '../../../core/providers.dart';
 import '../../../shared/queues.dart';
 
-/// Props: matchId, viewerPuuid
 class MatchDetailPage extends ConsumerStatefulWidget {
   final String matchId;
   final String viewerPuuid;
@@ -21,14 +20,53 @@ class MatchDetailPage extends ConsumerStatefulWidget {
 }
 
 class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
-  // estado: payload do match, participante “eu”, ícones/itens
-  // carregamento inicial + resolução de assets
   Map<String, dynamic>? _match; // payload completo do match
   Map<String, dynamic>? _me; // participante correspondente ao viewer
   String? _champIcon; // ícone do campeão
   String? _spell1Icon, _spell2Icon; // ícones dos feitiços
   List<String?> _itemIcons = const []; // ícones dos itens (0..6)
   String? _error;
+  // --- Players section (expand/collapse) ---
+  bool _showPlayers = false;
+  List<_PlayerBrief> _blueRoster = const [];
+  List<_PlayerBrief> _redRoster = const [];
+
+  Future<void> _loadPlayersIfNeeded() async {
+    if (_match == null) return;
+    if (_blueRoster.isNotEmpty || _redRoster.isNotEmpty) return;
+
+    final dd = ref.read(dataDragonProvider);
+    final info = _match!['info'] as Map<String, dynamic>;
+    final participants = List<Map<String, dynamic>>.from(
+      info['participants'] as List,
+    );
+
+    Future<_PlayerBrief> buildBrief(Map<String, dynamic> p) async {
+      final champName = (p['championName'] ?? '').toString();
+      final champIcon = await dd.championSquareUrl(champName);
+      final itemIds = List<int>.generate(7, (i) => (p['item$i'] ?? 0) as int);
+      final itemIcons = await Future.wait(itemIds.map((id) => dd.itemIcon(id)));
+      final game = (p['riotIdGameName'] ?? '').toString().trim();
+      final tag = (p['riotIdTagline'] ?? '').toString().trim();
+      final fallback = (p['summonerName'] ?? '').toString().trim();
+      final display = (game.isNotEmpty && tag.isNotEmpty)
+          ? '$game#$tag'
+          : (fallback.isNotEmpty ? fallback : '—');
+      return _PlayerBrief(
+        name: display,
+        championName: champName,
+        champIcon: champIcon,
+        items: itemIcons,
+        teamId: (p['teamId'] ?? 0) as int,
+      );
+    }
+
+    final briefs = await Future.wait(participants.map(buildBrief));
+    _blueRoster = briefs.where((b) => b.teamId == 100).toList(growable: false);
+    _redRoster = briefs.where((b) => b.teamId == 200).toList(growable: false);
+
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -59,7 +97,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
           ? await dd.championSquareUrl(championName)
           : null;
 
-      // Feitiços
+      // Feitiços (converte num -> int com segurança)
       final s1Key = (me['summoner1Id'] as num?)?.toInt() ?? 0;
       final s2Key = (me['summoner2Id'] as num?)?.toInt() ?? 0;
       final s1 = await dd.spellIconFromNumericKey(s1Key);
@@ -92,7 +130,6 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // topo (campeão/feitiços/itens) + abas/seções de estatísticas
     final theme = Theme.of(context);
 
     if (_error != null) {
@@ -232,19 +269,79 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
                 children: [
                   Text('Fila: $queue'),
                   Text('Patch: ${info['gameVersion'] ?? "—"}'),
-                  Text('Duração: ${(info['gameDuration'] ?? 0)} s'),
+                  Text(
+                    'Duração: ${formatDurationMmSs((info['gameDuration'] is int ? info['gameDuration'] as int : (info['gameDuration'] as num?)?.toInt() ?? 0))}',
+                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // Toggle players section
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionChip(
+              label: Text(
+                _showPlayers ? 'Esconder jogadores' : 'Mostrar jogadores',
+              ),
+              onPressed: () async {
+                setState(() => _showPlayers = !_showPlayers);
+                if (_showPlayers) {
+                  await _loadPlayersIfNeeded();
+                }
+              },
+            ),
+          ),
+          if (_showPlayers) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Time Azul',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final p in _blueRoster) _PlayerRow(player: p),
+                    const Divider(height: 24),
+                    const Text(
+                      'Time Vermelho',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final p in _redRoster) _PlayerRow(player: p),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
+class _PlayerBrief {
+  _PlayerBrief({
+    required this.name,
+    required this.championName,
+    required this.champIcon,
+    required this.items,
+    required this.teamId,
+  });
+
+  final String name;
+  final String championName;
+  final String? champIcon;
+  final List<String?> items;
+  final int teamId; // 100 (azul) / 200 (vermelho)
+}
+
 // ----- widgets auxiliares -----
-/// Chip/etiqueta (widget privado)
+
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});
@@ -260,7 +357,6 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// Ícone de feitiço (widget privado)
 class _SpellIcon extends StatelessWidget {
   final String? url;
   const _SpellIcon({this.url});
@@ -274,7 +370,6 @@ class _SpellIcon extends StatelessWidget {
   }
 }
 
-/// Ícone de item (widget privado)
 class _ItemIcon extends StatelessWidget {
   final String? url;
   const _ItemIcon({this.url});
@@ -292,6 +387,52 @@ class _ItemIcon extends StatelessWidget {
         color: url == null ? Colors.black12 : null,
       ),
       child: url == null ? const Icon(Icons.block, size: 18) : null,
+    );
+  }
+}
+
+class _PlayerRow extends StatelessWidget {
+  const _PlayerRow({required this.player});
+  final _PlayerBrief player;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundImage: player.champIcon != null
+                ? NetworkImage(player.champIcon!)
+                : null,
+            child: player.champIcon == null
+                ? const Icon(Icons.person, size: 18)
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  player.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final url in player.items) _ItemIcon(url: url),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

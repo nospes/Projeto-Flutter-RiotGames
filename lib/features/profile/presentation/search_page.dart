@@ -108,7 +108,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     return (preferred, const <String>[]);
   }
 
-  // Se não conseguimos inferir a plataforma pelo matchId (sem partidas),
+  // Se não conseguir inferir a plataforma pelo matchId (sem partidas),
   // tenta todas as plataformas até achar o summoner por PUUID.
   Future<(PlatformHost, Map<String, dynamic>)> _findSummonerAnyPlatform({
     required String puuid,
@@ -270,7 +270,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ],
             const Spacer(),
             const Text(
-              'Dica: Primeiro valide no emulador/celular.\nNo Web pode haver CORS com a Riot.',
+              'Na versão Web pode haver CORS com a Riot.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.black54),
             ),
