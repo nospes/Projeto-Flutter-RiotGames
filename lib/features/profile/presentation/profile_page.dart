@@ -138,7 +138,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  //Base da página
+  // construção da UI
   @override
   Widget build(BuildContext context) {
     // cabeçalho do perfil + lista/resumo de partidas

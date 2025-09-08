@@ -54,6 +54,10 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
       final champIcon = await dd.championSquareUrl(champName);
       final itemIds = List<int>.generate(7, (i) => (p['item$i'] ?? 0) as int);
       final itemIcons = await Future.wait(itemIds.map((id) => dd.itemIcon(id)));
+      final kills = (p['kills'] as num?)?.toInt() ?? 0;
+      final deaths = (p['deaths'] as num?)?.toInt() ?? 0;
+      final assists = (p['assists'] as num?)?.toInt() ?? 0;
+      final gold = (p['goldEarned'] as num?)?.toInt() ?? 0;
 
       final game = (p['riotIdGameName'] ?? '').toString().trim();
       final tag = (p['riotIdTagline'] ?? '').toString().trim();
@@ -68,6 +72,10 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
         champIcon: champIcon,
         items: itemIcons,
         teamId: (p['teamId'] ?? 0) as int,
+        kills: kills,
+        deaths: deaths,
+        assists: assists,
+        gold: gold,
       );
     }
 
@@ -145,7 +153,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     }
   }
 
-  // Construção da pagina
+  // construção da UI
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -361,14 +369,25 @@ class _PlayerBrief {
     required this.champIcon,
     required this.items,
     required this.teamId,
+    required this.kills,
+    required this.deaths,
+    required this.assists,
+    required this.gold,
   });
 
   final String name;
   final String championName;
   final String? champIcon;
   final List<String?> items;
-  final int teamId;
+  final int teamId; // 100 (azul) / 200 (vermelho)
+
+  // NOVO
+  final int kills;
+  final int deaths;
+  final int assists;
+  final int gold;
 }
+
 // ----- widgets auxiliares -----
 
 //Pequeno container de texto
@@ -453,6 +472,13 @@ class _PlayerRow extends StatelessWidget {
                   player.name,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+
+                const SizedBox(height: 4),
+                Text(
+                  'K/D/A - ${player.kills}/${player.deaths}/${player.assists} | Ouro - ${player.gold}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
