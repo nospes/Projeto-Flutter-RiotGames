@@ -84,7 +84,7 @@ flutter test
 
 MIT License
 
-Copyright (c) 2025 José Felipe
+Copyright (c) 2025 José Felipe Paganelli Velloso
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
