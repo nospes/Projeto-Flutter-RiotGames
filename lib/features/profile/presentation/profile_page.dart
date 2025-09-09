@@ -216,24 +216,30 @@ class _MatchSummary {
 }
 
 // --------- CARD DA PARTIDA ---------
-/// Cartão/resumo de partida (widget privado)
+/// Cartão/resumo de partida (faixa lateral + chip colorido inline)
 class _MatchCard extends StatelessWidget {
   final _MatchSummary summary;
   const _MatchCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
+    //Declarações
     final kda = summary.deaths == 0
         ? (summary.kills + summary.assists).toDouble()
         : (summary.kills + summary.assists) / summary.deaths;
 
     final queue = queueLabel(summary.queueId);
     final duration = formatDurationMmSs(summary.durationSec);
-    final badgeColor = summary.win
+
+    // Verde se vitória, vermelho se derrota
+    final resultColor = summary.win
         ? Colors.green.shade600
         : Colors.red.shade600;
 
     return Card(
+      // Formatação
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias, // garante o recorte nos cantos
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(
@@ -245,81 +251,96 @@ class _MatchCard extends StatelessWidget {
             ),
           );
         },
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        child: IntrinsicHeight(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ícone do campeão
-              CircleAvatar(
-                radius: 26,
-                backgroundImage: summary.championIcon != null
-                    ? NetworkImage(summary.championIcon!)
-                    : null,
-                child: summary.championIcon == null
-                    ? const Icon(Icons.sports_esports)
-                    : null,
-              ),
-              const SizedBox(width: 12),
+              // Faixa lateral
+              Container(width: 12, color: resultColor),
 
-              // infos
+              // CONTEÚDO
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Campeão + badge de resultado
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            summary.champion.isEmpty ? '—' : summary.champion,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // ícone do campeão
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundImage: summary.championIcon != null
+                            ? NetworkImage(summary.championIcon!)
+                            : null,
+                        child: summary.championIcon == null
+                            ? const Icon(Icons.sports_esports)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+
+                      // textos/chips
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Campeão + CHIP colorido na mesma linha
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    summary.champion.isEmpty
+                                        ? '—'
+                                        : summary.champion,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Chip(
+                                  label: Text(
+                                    summary.win ? 'Vitória' : 'Derrota',
+                                  ),
+                                  labelStyle: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  backgroundColor: resultColor,
+                                  shape: const StadiumBorder(
+                                    side: BorderSide(color: Colors.transparent),
+                                  ),
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            summary.win ? 'Vitória' : 'Derrota',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+
+                            const SizedBox(height: 6),
+
+                            // chips de KDA / fila / duração (neutros)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: -8,
+                              children: [
+                                _Chip(
+                                  text:
+                                      'K/D/A ${summary.kills}/${summary.deaths}/${summary.assists}',
+                                ),
+                                _Chip(text: 'KDA ${kda.toStringAsFixed(2)}'),
+                                _Chip(text: queue),
+                                _Chip(text: duration),
+                              ],
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // chips de KDA / fila / duração
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: -8,
-                      children: [
-                        _Chip(
-                          text:
-                              'K/D/A ${summary.kills}/${summary.deaths}/${summary.assists}',
-                        ),
-                        _Chip(text: 'KDA ${kda.toStringAsFixed(2)}'),
-                        _Chip(text: queue),
-                        _Chip(text: duration),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
             ],
           ),
         ),
@@ -328,7 +349,7 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
-/// Chip de status/labels (widget privado)
+/// Chip de status/labels
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});

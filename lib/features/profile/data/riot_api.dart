@@ -60,4 +60,18 @@ class RiotApi {
     final res = await _dio.get(url);
     return Map<String, dynamic>.from(res.data);
   }
+
+  /*
+  Future<List<Map<String, dynamic>>> getLeagueEntriesBySummonerId({
+    required String summonerId,
+    PlatformHost platform = PlatformHost.br1,
+  }) async {
+    final url =
+        '${platformBase(platform)}/lol/league/v4/entries/by-summoner/$summonerId';
+    final res = await _dio.get(url);
+    return (res.data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+  */
 }
