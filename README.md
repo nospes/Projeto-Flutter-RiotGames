@@ -31,7 +31,7 @@ lib/
 ├─ shared/
 │  ├─ data_dragon.dart              # Versões/ícones (campeões/itens/feitiços)
 │  ├─ queues.dart                   # Mapa de filas e helper de label
-│  └─ time_format.dart              # Formatação de tempo
+│  ├─ time_format.dart              # Formatação de tempo
 |  └─ match_classifier.dart         # Classificador customizado de desempenho
 └─ main.dart                        # Bootstrap do app
 ```
